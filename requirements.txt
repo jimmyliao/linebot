@@ -1,0 +1,5 @@
+line-bot-sdk==3.14.2
+flask
+google-generativeai
+openai==1.57.3
+pyngrok
