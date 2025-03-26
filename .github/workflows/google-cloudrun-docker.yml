@@ -13,7 +13,7 @@ env:
   POOL: gde-kj-linebot
   PROVIDER: github-provider
   SERVICE_NAME: linebot
-  ARTIFACT_REGISTRY_REGION: asia-east1
+  ARTIFACT_REGISTRY: gcr.io
   REPOSITORY_NAME: linebot-repo
 
 
@@ -50,10 +50,10 @@ jobs:
     - name: Build Docker image
       run: |
         PROJECT_ID=${{ env.PROJECT_ID }}
-        SERVICE_NAME=linebot
-        ARTIFACT_REGISTRY_REGION=asia-east1
-        REPOSITORY_NAME=linebot-repo
-        IMAGE_NAME=${ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${SERVICE_NAME}:${{ steps.set_tag.outputs.tag }}
+        SERVICE_NAME=${{ env.SERVICE_NAME }}
+        ARTIFACT_REGISTRY=${{ env.ARTIFACT_REGISTRY }}
+        REPOSITORY_NAME=${{ env.REPOSITORY_NAME }}
+        IMAGE_NAME=${ARTIFACT_REGISTRY}/${PROJECT_ID}/${REPOSITORY_NAME}/${SERVICE_NAME}:${{ steps.set_tag.outputs.tag }}
         docker buildx build --platform linux/amd64 -t ${IMAGE_NAME} -f Dockerfile .
 
 
