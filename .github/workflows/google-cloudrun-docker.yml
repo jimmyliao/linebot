@@ -1,0 +1,35 @@
+name: Build || Push || Deploy Cloud 
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: asia-east1
+jobs:
+  build-and-push:
+    name: Build && Push && Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set Docker image tag
+        id: set_tag
+        run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.3.0
+        with:
+          service_account_email: ${{ secrets.GCP_SA_EMAIL }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+     
+      - name: Configure Docker
+        uses: docker/login-action@v2
+        with:
+          registry: me-central1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t me-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/chain-service/chain-service:${{ steps.set_tag.outputs.tag }} -f Dockerfile .
