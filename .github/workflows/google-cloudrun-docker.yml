@@ -37,6 +37,19 @@ jobs:
         export_default_credentials: true
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+    - name: Configure Docker
+      uses: docker/login-action@v2
+      with:
+        registry: asia-east1-docker.pkg.dev
+        username: _json_key
+        password: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Build Docker image
+      run: docker build -t asia-east1-docker.pkg.dev/${{ env.PROJECT_ID }}/linebot:${{ steps.set_tag.outputs.tag }} -f Dockerfile .
+
+
+
+
     # - id: 'auth'
     #   uses: google-github-actions/auth@v2
     #   with:
