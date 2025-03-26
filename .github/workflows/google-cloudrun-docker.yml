@@ -1,4 +1,10 @@
 name: Build || Push || Deploy Cloud 
+
+on:
+  push:
+    branches:
+      - main
+
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-east1
