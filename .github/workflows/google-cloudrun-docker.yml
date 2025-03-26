@@ -49,9 +49,9 @@ jobs:
 
     - name: Build Docker image
       run: |
-        PROJECT_ID="${{ env.PROJECT_ID }}"
-        SERVICE_NAME="${{ env.SERVICE_NAME }}"
-        IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${{ steps.set_tag.outputs.tag }}"
+        PROJECT_ID="gde-kj"
+        SERVICE_NAME="linebot"
+        IMAGE_NAME="gcr.io/gde-kj/linebot"
         echo "Building image with tag: ${IMAGE_NAME}"
         docker buildx build --platform linux/amd64 -t "$IMAGE_NAME" -f Dockerfile .
 
