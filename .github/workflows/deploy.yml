@@ -42,12 +42,19 @@ jobs:
         with:
           workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
           service_account: SERVICE_ACCOUNT
+          project_id: ${{ secrets.GOOGLE_PROJECT_ID }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
+        env:
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud config set project GOOGLE_PROJECT_ID
-          gcloud config set run/region GOOGLE_LOCATION
-          gcloud run deploy linebot --image gcr.io/GOOGLE_PROJECT_ID/linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
+          gcloud config set project ${{ secrets.GOOGLE_PROJECT_ID }}
+          gcloud config set run/region ${{ secrets.GOOGLE_LOCATION }}
+          gcloud run deploy linebot --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}//linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
+        env:
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
