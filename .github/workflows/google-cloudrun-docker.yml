@@ -7,10 +7,16 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_SA_EMAIL: ${{ secrets.GCP_SA_EMAIL }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
   REGION: asia-east1
+  POOL: gde-kj-linebot
+  PROVIDER: github-provider
+
 
 jobs:
   job_id:
+    runs-on: ubuntu-latest
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -19,9 +25,8 @@ jobs:
     - id: 'auth'
       uses: google-github-actions/auth@v2
       with:
-        workload_identity_provider: projects/122809017192/locations/global/workloadIdentityPools/gde-kj-linebot/providers/github-provider
+        workload_identity_provider: projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/${{ env.POOL }}/providers/${{ env.PROVIDER }}
         service_account: ${{ secrets.GCP_SA_EMAIL }}
-        
         
     - name: 'Set up Cloud SDK'
       uses: 'google-github-actions/setup-gcloud@v2'
