@@ -5,9 +5,6 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, FollowEvent
 )
 
-from pyngrok import ngrok
-from pyngrok.conf import PyngrokConfig
-
 import os
 import google.generativeai as genai
 
@@ -64,14 +61,22 @@ secret = os.environ["LINE_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(access_token)
 handler = WebhookHandler(secret)
 
-try:
-    webhook_url = ngrok.connect(
-        addr="127.0.0.1:5000", 
-        pyngrok_config=PyngrokConfig(start_new_session=True)
-    )
-    print("Ngrok Tunnel URL:", webhook_url)
-except Exception as e:
-    print("Error while connecting with ngrok:", e)
+import sys
+
+if 'google.colab' in sys.modules or 'cloud' not in os.environ.get("ENVIRONMENT", ""):
+    from pyngrok import ngrok
+    from pyngrok.conf import PyngrokConfig
+    NGROK_TOKEN = os.environ.get("NGROK_TOKEN")
+
+    try:
+        webhook_url = ngrok.connect(
+            addr="127.0.0.1:5000", 
+            pyngrok_config=PyngrokConfig(start_new_session=True),
+            authtoken=NGROK_TOKEN
+        )
+        print("Ngrok Tunnel URL:", webhook_url)
+    except Exception as e:
+        print("Error while connecting with ngrok:", e)
 
 
 @app.route("/", methods=["POST"])
@@ -106,4 +111,5 @@ def handle_follow(event):
 
 
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)

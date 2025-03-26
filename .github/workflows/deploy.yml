@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python 3.12
         uses: actions/setup-python@v3
         with:
-          python-version: "3.9"
+          python-version: "3.12"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -51,29 +51,3 @@ jobs:
           gcloud config set project GOOGLE_PROJECT_ID
           gcloud config set run/region GOOGLE_LOCATION
           gcloud run deploy linebot --image gcr.io/GOOGLE_PROJECT_ID/linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
-
-  local-run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.9"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ngrok
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-      - name: Run with ngrok
-        run: |
-          ngrok http 8080 &
-          python app.py
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
-          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
-          GOOGLE_LOCATION: asia-east1

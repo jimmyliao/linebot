@@ -4,6 +4,7 @@ PROJECT_ID := gde-kj
 REGION := asia-east1
 SERVICE_NAME := linebot
 IMAGE_NAME := gcr.io/$(PROJECT_ID)/$(SERVICE_NAME)
+NGROK_TOKEN := $(shell cat .env | grep NGROK_TOKEN | cut -d'=' -f2)
 
 # Local run
 local:
@@ -11,7 +12,7 @@ local:
 
 # Build Docker image
 build:
-	docker build -t $(IMAGE_NAME) .
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME) .
 
 # Push Docker image to Google Container Registry
 push:
@@ -27,4 +28,7 @@ deploy:
 clean:
 	docker rmi $(IMAGE_NAME)
 
-.PHONY: local build push deploy clean
+run:
+	docker run --env PORT=8080 --env NGROK_TOKEN=$(NGROK_TOKEN) --env-file .env -p 8080:8080 $(IMAGE_NAME)
+
+.PHONY: local build push deploy clean run
