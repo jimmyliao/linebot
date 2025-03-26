@@ -50,9 +50,16 @@ jobs:
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
+      # - name: Deploy to Cloud Run
+      #   run: |
+      #     gcloud run deploy linebot --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}//linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
+      #   env:
+      #     GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+      #     GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy linebot --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}//linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
+          gcloud run deploy linebot --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}/linebot:$GITHUB_SHA --platform managed --allow-unauthenticated
         env:
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
