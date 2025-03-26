@@ -12,6 +12,9 @@ env:
   REGION: asia-east1
   POOL: gde-kj-linebot
   PROVIDER: github-provider
+  SERVICE_NAME: linebot
+  ARTIFACT_REGISTRY_REGION: asia-east1
+  REPOSITORY_NAME: linebot-repo
 
 
 jobs:
@@ -29,13 +32,13 @@ jobs:
       id: set_tag
       run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
 
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.3.0
-      with:
-        service_account_email: ${{ secrets.GCP_SA_EMAIL }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    # - name: Set up Google Cloud SDK
+    #   uses: google-github-actions/setup-gcloud@v0.3.0
+    #   with:
+    #     service_account_email: ${{ secrets.GCP_SA_EMAIL }}
+    #     service_account_key: ${{ secrets.GCP_SA_KEY }}
+    #     export_default_credentials: true
+    #     project_id: ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Configure Docker
       uses: docker/login-action@v2
@@ -45,7 +48,13 @@ jobs:
         password: ${{ secrets.GCP_SA_KEY }}
 
     - name: Build Docker image
-      run: docker build -t asia-east1-docker.pkg.dev/${{ env.PROJECT_ID }}/linebot:${{ steps.set_tag.outputs.tag }} -f Dockerfile .
+      run: |
+        PROJECT_ID=${{ env.PROJECT_ID }}
+        SERVICE_NAME=linebot
+        ARTIFACT_REGISTRY_REGION=asia-east1
+        REPOSITORY_NAME=linebot-repo
+        IMAGE_NAME=${ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${SERVICE_NAME}:${{ steps.set_tag.outputs.tag }}
+        docker buildx build --platform linux/amd64 -t ${IMAGE_NAME} -f Dockerfile .
 
 
 
