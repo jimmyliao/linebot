@@ -87,3 +87,12 @@ jobs:
         service_account_key: ${{ secrets.GCP_SA_KEY }}
         export_default_credentials: true
         project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Deploy to Cloud Run
+      run: |
+        IMAGE_NAME="gcr.io/gde-kj/linebot"
+        echo "Deploying image with tag: ${IMAGE_NAME}"
+        gcloud run deploy --image $IMAGE_NAME --platform managed --region $REGION --allow-unauthenticated
+      
+
+
