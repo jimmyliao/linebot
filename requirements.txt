@@ -3,4 +3,5 @@ flask
 google-generativeai
 openai==1.57.3
 pyngrok
+ngrok
 python-dotenv
