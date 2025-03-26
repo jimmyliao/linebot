@@ -55,6 +55,11 @@ jobs:
         echo "Building image with tag: ${IMAGE_NAME}"
         docker buildx build --platform linux/amd64 -t "$IMAGE_NAME" -f Dockerfile .
 
+    - name: Push Docker image to Artifact Registry
+      run: |
+        IMAGE_NAME="gcr.io/gde-kj/linebot"
+        echo "Pushing image with tag: ${IMAGE_NAME}:${{ steps.set_tag.outputs.tag }}"
+        docker push $IMAGE_NAME:${{ steps.set_tag.outputs.tag }}
 
 
 
