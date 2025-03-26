@@ -13,15 +13,18 @@
     # pkgs.nodePackages.nodemon
     pkgs.tzdata
     pkgs.gnumake
+    pkgs.zsh
     pkgs.openssh
+    pkgs.direnv
+    pkgs.zsh-autosuggestions
+    pkgs.zsh-completions
   ];
 
   # Sets environment variables in the workspace
   env = {
     TZDIR = "/usr/share/zoneinfo";
     TZ = "Asia/Taipei";
-    # change display language to zh-hant
-
+    SHELL = "${pkgs.zsh}/bin/zsh"; # Set zsh as default shell
   };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
