@@ -8,62 +8,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
+    # Add 'id-token' with the intended permissions for workload identity federation
     permissions:
       contents: 'read'
       id-token: 'write'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Authenticate to Google Cloud
+      - name: Google Auth
         id: auth
-        uses: google-github-actions/auth@v1
+        uses: 'google-github-actions/auth@v1'
         with:
-          workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
-          service_account: SERVICE_ACCOUNT
-          project_id: ${{ secrets.GOOGLE_PROJECT_ID }}
+          token_format: 'access_token'
+          workload_identity_provider: '${{ vars.WIF_PROVIDER }}' # e.g. - projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider
+          service_account: '${{ vars.WIF_SERVICE_ACCOUNT }}' # e.g. - my-service-account@my-project.iam.gserviceaccount.com
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        env:
-          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
-          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-
+      # Authenticate Docker to Google Cloud Artifact Registry
       - name: Docker Auth
         id: docker-auth
         uses: 'docker/login-action@v1'
         with:
           username: 'oauth2accesstoken'
           password: '${{ steps.auth.outputs.access_token }}'
-          registry: '${{ vars.REGION }}-docker.pkg.dev'
+          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
 
-      - name: Build, tag and push container
+      - name: Build and Push Docker Image
         id: build-image
-        uses: docker/build-push-action@v3
+        uses: 'docker/build-push-action@v2'
         with:
-          context: ${{ vars.code_directory }}
-          push: true 
+          context: .
+          push: true
           tags: |
-            ${{ vars.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPO }}/${{ vars.SERVICE_NAME }}:${{ inputs.ref }}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
 
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v0
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          # NOTE: If using a pre-built image, update the image name here
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
