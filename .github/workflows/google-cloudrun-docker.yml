@@ -75,7 +75,7 @@ jobs:
       id-token: 'write'
 
     steps:
-    - id: 'auth'
+    - name: Google Authentication
       uses: google-github-actions/auth@v2
       with:
         workload_identity_provider: projects/122809017192/locations/global/workloadIdentityPools/gde-kj-linebot/providers/github-provider
