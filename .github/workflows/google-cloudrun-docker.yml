@@ -49,7 +49,7 @@ jobs:
     - name: Configure Docker
       uses: docker/login-action@v2
       with:
-        registry: asia-east1-docker.pkg.dev
+        registry: ${{ env.ARTIFACT_REGISTRY }}
         username: _json_key
         password: ${{ secrets.GCP_SA_KEY }}
 
