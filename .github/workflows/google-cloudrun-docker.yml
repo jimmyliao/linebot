@@ -62,6 +62,7 @@ jobs:
         docker push $IMAGE_NAME
 
   deploy:
+    needs: build-and-push
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -75,15 +76,3 @@ jobs:
         service_account_key: ${{ secrets.GCP_SA_KEY }}
         export_default_credentials: true
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-    # - id: 'auth'
-    #   uses: google-github-actions/auth@v2
-    #   with:
-    #     workload_identity_provider: projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/${{ env.POOL }}/providers/${{ env.PROVIDER }}
-    #     service_account: ${{ secrets.GCP_SA_EMAIL }}
-        
-    # - name: 'Set up Cloud SDK'
-    #   uses: 'google-github-actions/setup-gcloud@v2'
-
-    # - name: 'Use gcloud CLI'
-    #   run: 'gcloud info'      
