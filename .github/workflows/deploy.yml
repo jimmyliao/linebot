@@ -52,8 +52,6 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud config set project ${{ secrets.GOOGLE_PROJECT_ID }}
-          gcloud config set run/region ${{ secrets.GOOGLE_LOCATION }}
           gcloud run deploy linebot --image gcr.io/${{ secrets.GOOGLE_PROJECT_ID }}//linebot:$GITHUB_SHA --platform managed --region asia-east1 --allow-unauthenticated --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,LINE_CHANNEL_ACCESS_TOKEN=$LINE_CHANNEL_ACCESS_TOKEN,LINE_CHANNEL_SECRET=$LINE_CHANNEL_SECRET
         env:
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
