@@ -1,3 +1,5 @@
+import sys
+
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -61,8 +63,6 @@ secret = os.environ["LINE_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(access_token)
 handler = WebhookHandler(secret)
 
-import sys
-
 if 'google.colab' in sys.modules or 'cloud' not in os.environ.get("ENVIRONMENT", ""):
     from pyngrok import ngrok
     from pyngrok.conf import PyngrokConfig
@@ -70,7 +70,7 @@ if 'google.colab' in sys.modules or 'cloud' not in os.environ.get("ENVIRONMENT",
 
     try:
         webhook_url = ngrok.connect(
-            addr="127.0.0.1:5000", 
+            addr="127.0.0.1:5000",
             pyngrok_config=PyngrokConfig(start_new_session=True),
             authtoken=NGROK_TOKEN
         )

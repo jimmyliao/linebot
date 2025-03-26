@@ -5,14 +5,19 @@ REGION := asia-east1
 SERVICE_NAME := linebot
 IMAGE_NAME := gcr.io/$(PROJECT_ID)/$(SERVICE_NAME)
 NGROK_TOKEN := $(shell cat .env | grep NGROK_TOKEN | cut -d'=' -f2)
+TARGET_PLATFORM := linux/amd64
 
 # Local run
 local:
 	python app.py
 
+# Local ACT to simulate GitHub Actions
+local-act:
+	act --container-architecture $(TARGET_PLATFORM) -j lint
+
 # Build Docker image
 build:
-	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME) .
+	docker buildx build --platform $(TARGET_PLATFORM) -t $(IMAGE_NAME) .
 
 # Push Docker image to Google Container Registry
 push:

@@ -67,30 +67,30 @@ jobs:
         echo "Pushing image with tag: ${IMAGE_NAME}"
         docker push $IMAGE_NAME
 
-  deploy:
-    needs: build-and-push
-    runs-on: 'ubuntu-latest'
-    permissions:
-      contents: 'read'
-      id-token: 'write'
+  # deploy:
+  #   needs: build-and-push
+  #   runs-on: 'ubuntu-latest'
+  #   permissions:
+  #     contents: 'read'
+  #     id-token: 'write'
 
-    steps:
-    - name: Google Authentication
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: projects/122809017192/locations/global/workloadIdentityPools/gde-kj-linebot/providers/github-provider
-        service_account: ${{ secrets.GCP_SA_EMAIL }}
+  #   steps:
+  #   - name: Google Authentication
+  #     uses: google-github-actions/auth@v2
+  #     with:
+  #       workload_identity_provider: projects/122809017192/locations/global/workloadIdentityPools/gde-kj-linebot/providers/github-provider
+  #       service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-    # - name: Set up Google Cloud SDK
-    #   uses: google-github-actions/setup-gcloud@v0.3.0
-    #   with:
-    #     service_account_email: ${{ secrets.GCP_SA_EMAIL }}
-    #     service_account_key: ${{ secrets.GCP_SA_KEY }}
-    #     export_default_credentials: true
-    #     project_id: ${{ secrets.GCP_PROJECT_ID }}
+  #   # - name: Set up Google Cloud SDK
+  #   #   uses: google-github-actions/setup-gcloud@v0.3.0
+  #   #   with:
+  #   #     service_account_email: ${{ secrets.GCP_SA_EMAIL }}
+  #   #     service_account_key: ${{ secrets.GCP_SA_KEY }}
+  #   #     export_default_credentials: true
+  #   #     project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Deploy to Cloud Run
-      run: |
-        IMAGE_NAME="gcr.io/gde-kj/linebot"
-        echo "Deploying image with tag: ${IMAGE_NAME}"
-        gcloud run deploy linebot --image $IMAGE_NAME --platform managed --region $REGION --allow-unauthenticated
+  #   - name: Deploy to Cloud Run
+  #     run: |
+  #       IMAGE_NAME="gcr.io/gde-kj/linebot"
+  #       echo "Deploying image with tag: ${IMAGE_NAME}"
+  #       gcloud run deploy linebot --image $IMAGE_NAME --platform managed --region $REGION --allow-unauthenticated
