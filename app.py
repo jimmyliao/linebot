@@ -11,6 +11,10 @@ from pyngrok.conf import PyngrokConfig
 import os
 import google.generativeai as genai
 
+# load env variables
+from dotenv import load_dotenv
+load_dotenv()
+
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Create the model
