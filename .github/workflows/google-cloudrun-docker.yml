@@ -93,7 +93,4 @@ jobs:
       run: |
         IMAGE_NAME="gcr.io/gde-kj/linebot"
         echo "Deploying image with tag: ${IMAGE_NAME}"
-        gcloud run deploy --image $IMAGE_NAME --platform managed --region $REGION --allow-unauthenticated
-      
-
-
+        gcloud run deploy linebot --image $IMAGE_NAME --platform managed --region $REGION --allow-unauthenticated
