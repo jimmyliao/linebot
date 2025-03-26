@@ -30,12 +30,12 @@ jobs:
       run: echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
 
     - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0.3.0
-        with:
-          service_account_email: ${{ secrets.GCP_SA_EMAIL }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      uses: google-github-actions/setup-gcloud@v0.3.0
+      with:
+        service_account_email: ${{ secrets.GCP_SA_EMAIL }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
 
     # - id: 'auth'
     #   uses: google-github-actions/auth@v2
