@@ -97,8 +97,8 @@ def handle_message(event):
         TextSendMessage(text=response)
     )
 
-
-SYSTEM_PROMPT = "Hello, I'm Gemini!"
+# SYSTEM PROMPT should prepare to answer with Traditional Chinese
+SYSTEM_PROMPT = "請以繁體中文回應"
 
 
 @handler.add(FollowEvent)
