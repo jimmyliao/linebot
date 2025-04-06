@@ -4,11 +4,15 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, FollowEvent
+    MessageEvent, TextMessage, TextSendMessage, FollowEvent,
+    ImageMessage
 )
 
 import os
 import google.generativeai as genai
+import base64
+import requests
+from io import BytesIO
 
 # load env variables
 from dotenv import load_dotenv
@@ -35,12 +39,19 @@ generation_config = {
     "response_mime_type": "text/plain",
 }
 
-model = genai.GenerativeModel(
+# Text model for chat
+text_model = genai.GenerativeModel(
     model_name="gemini-2.0-flash-exp",
     generation_config=generation_config,
 )
 
-chat_session = model.start_chat(
+# Vision model for image processing
+vision_model = genai.GenerativeModel(
+    model_name="gemini-2.5-pro-preview-03-25",
+    generation_config=generation_config,
+)
+
+chat_session = text_model.start_chat(
     history=[
         {
             "role": "user",
@@ -58,10 +69,39 @@ chat_session = model.start_chat(
 )
 
 
-# wrap above code in a function
-def get_response(user_input):
+# Function to get text response
+def get_text_response(user_input):
     response = chat_session.send_message(user_input)
     return response.text
+
+# Function to process image and get summary
+def get_image_summary(image_url):
+    try:
+        # Download the image from LINE's server
+        content = line_bot_api.get_message_content(image_url)
+        image_data = BytesIO()
+        for chunk in content.iter_content():
+            image_data.write(chunk)
+        image_data.seek(0)
+        
+        # Convert to base64 for Gemini
+        image_base64 = base64.b64encode(image_data.read()).decode('utf-8')
+        
+        # Create prompt for image analysis
+        prompt = "請以繁體中文描述這張圖片的內容。提供詳細的描述，包括圖片中的主要物體、人物、場景和任何值得注意的細節。"
+        
+        # Get response from Gemini vision model
+        response = vision_model.generate_content(
+            [
+                prompt,
+                {"mime_type": "image/jpeg", "data": image_base64}
+            ]
+        )
+        
+        return response.text
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        return "抱歉，我無法處理這張圖片。請再試一次或上傳其他圖片。"
 
 
 # initialize the Flask app
@@ -89,12 +129,26 @@ def callback():
 
 
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
+def handle_text_message(event):
     user_input = event.message.text
-    response = get_response(user_input)
+    response = get_text_response(user_input)
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response)
+    )
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image_message(event):
+    # Get the message ID of the image
+    message_id = event.message.id
+    
+    # Get image summary from Gemini
+    summary = get_image_summary(message_id)
+    
+    # Reply with the summary
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=summary)
     )
 
 # SYSTEM PROMPT should prepare to answer with Traditional Chinese
