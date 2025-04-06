@@ -24,7 +24,10 @@ build:
 
 init:
 	@if grep -Eq "^GEMINI_API_KEY=your_" .env && grep -Eq "^LINE_CHANNEL_ACCESS_TOKEN=your_" .env && grep -Eq "^LINE_CHANNEL_SECRET=your_" .env && grep -Eq "^GOOGLE_PROJECT_ID=your_" .env && grep -Eq "^GOOGLE_LOCATION=your_" .env && grep -Eq "^GOOGLE_SERVICE_NAME=your_" .env && grep -Eq "^NGROK_TOKEN=your_" .env; then echo "Error: Please update the .env file with your actual values." && exit 1; fi
-	@NGROK_TOKEN=$$(grep NGROK_TOKEN .env | cut -d'=' -f2 | tr -d '\n') && sed -i '' "s/_TOKEN_/$$NGROK_TOKEN/g" .ngrok/config.yml
+	@set NGROK_TOKEN := $(shell grep NGROK_TOKEN .env | cut -d'=' -f2 | tr -d '\n')
+	@echo ${NGROK_TOKEN}
+	@cd $(CURDIR)
+	@perl -pi -e "s/_TOKEN_/$(NGROK_TOKEN)/g" .ngrok/config.yml
 	@cat .env
 
 # Push Docker image to Google Container Registry
