@@ -19,6 +19,9 @@ local-act:
 build:
 	docker buildx build --platform $(TARGET_PLATFORM) -t $(IMAGE_NAME) .
 
+init:
+	NGROK_TOKEN=$$(grep NGROK_TOKEN .env | cut -d'=' -f2 | tr -d '\n') && sed -i '' "s/_TOKEN_/$$NGROK_TOKEN/g" .ngrok/config.yml
+
 # Push Docker image to Google Container Registry
 push:
 	docker push $(IMAGE_NAME)
@@ -36,4 +39,4 @@ clean:
 run:
 	docker run --env PORT=8080 --env NGROK_TOKEN=$(NGROK_TOKEN) --env-file .env -p 8080:8080 $(IMAGE_NAME)
 
-.PHONY: local build push deploy clean run
+.PHONY: local build push deploy clean run init

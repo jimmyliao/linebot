@@ -1,0 +1,11 @@
+version: 3
+
+agent:
+  authtoken: _TOKEN_
+  
+
+tunnels:
+  basic:
+    proto: http
+    addr: 8080
+
