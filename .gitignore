@@ -171,4 +171,5 @@ cython_debug/
 .pypirc
 
 # ngrok
+.ngrok/*
 .ngrok/config.yml
