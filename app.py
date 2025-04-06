@@ -14,7 +14,17 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 load_dotenv()
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+access_token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+secret = os.environ["LINE_CHANNEL_SECRET"]
+environment = os.environ.get("ENVIRONMENT", "local")
+gemini_api_key = os.environ["GEMINI_API_KEY"]
+webhook_host = "0.0.0.0"
+webhook_port = 8080
+
+# print env
+print(f"Environment: {environment}")
+
+genai.configure(api_key=gemini_api_key)
 
 # Create the model
 generation_config = {
@@ -57,26 +67,14 @@ def get_response(user_input):
 # initialize the Flask app
 app = Flask(__name__)
 
-access_token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
-secret = os.environ["LINE_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(access_token)
 handler = WebhookHandler(secret)
 
-if 'google.colab' in sys.modules or 'cloud' not in os.environ.get("ENVIRONMENT", ""):
-    from pyngrok import ngrok
-    from pyngrok.conf import PyngrokConfig
-    NGROK_TOKEN = os.environ.get("NGROK_TOKEN")
 
-    try:
-        webhook_url = ngrok.connect(
-            addr="127.0.0.1:5000",
-            pyngrok_config=PyngrokConfig(start_new_session=True),
-            authtoken=NGROK_TOKEN
-        )
-        print("Ngrok Tunnel URL:", webhook_url)
-    except Exception as e:
-        print("Error while connecting with ngrok:", e)
+@app.route("/health")
+def health():
+    return ("OK", 200)
 
 
 @app.route("/", methods=["POST"])
