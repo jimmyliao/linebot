@@ -5,3 +5,4 @@ openai==1.57.3
 pyngrok
 ngrok
 python-dotenv
+line-bot-sdk

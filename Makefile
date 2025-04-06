@@ -44,10 +44,32 @@ deploy:
 clean:
 	docker rmi $(IMAGE_NAME)
 
+# Update .env with the current ngrok HTTPS URL
+# Prerequisite: Run 'make local-tunnel' in another terminal first!
+# Requires: curl, jq
+update-env-ngrok:
+	@echo "Attempting to fetch ngrok URL from API (ensure ngrok is running)"; \
+	sleep 2; \
+	NGROK_URL=$$(curl -s http://127.0.0.1:4041/api/tunnels | jq -r '.tunnels[] | select(.proto=="https") | .public_url'); \
+	if [ -z "$$NGROK_URL" ] || [ "$$NGROK_URL" = "null" ]; then \
+		echo "Error: Could not retrieve ngrok HTTPS URL."; \
+		echo "Please ensure 'make local-tunnel' is running and the tunnel is active."; \
+		exit 1; \
+	fi; \
+	echo "Found ngrok URL: $$NGROK_URL"; \
+	if grep -q "^NGROK_URL=" .env; then \
+		echo "Updating existing NGROK_URL in .env..."; \
+		awk -v url="$$NGROK_URL" 'BEGIN{FS=OFS="="} /^NGROK_URL=/ {$2=url} 1' .env > .env.tmp && mv .env.tmp .env; \
+	else \
+		echo "Adding NGROK_URL to .env..."; \
+		echo "NGROK_URL=$$NGROK_URL" >> .env; \
+	fi; \
+	echo ".env file updated successfully."
+
 run:
 	docker run --env PORT=8080 --env NGROK_TOKEN=$(NGROK_TOKEN) --env-file .env -p 8080:8080 $(IMAGE_NAME)
 
 destroy:
 	gcloud run services delete $(SERVICE_NAME) --region $(REGION) --project $(PROJECT_ID) --quiet
 
-.PHONY: local build push deploy clean run init destroy
+.PHONY: local-tunnel local build init push deploy update-env-ngrok clean run destroy

@@ -1,18 +1,38 @@
 import sys
+import warnings
+import threading
+import time
+import logging
+from datetime import datetime
 
-from flask import Flask, request, abort
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(funcName)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+# Suppress deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+from flask import Flask, request, abort, send_from_directory
+# Import LINE Bot SDK
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, FollowEvent,
-    ImageMessage
+    ImageMessage, ImageSendMessage
 )
 
 import os
 import google.generativeai as genai
 import base64
-import requests
+import mimetypes
+from pathlib import Path
 from io import BytesIO
+
+from gemini_vision import generate_image_from_text as generate_image_from_vision_module
 
 # load env variables
 from dotenv import load_dotenv
@@ -25,12 +45,27 @@ gemini_api_key = os.environ["GEMINI_API_KEY"]
 webhook_host = "0.0.0.0"
 webhook_port = 8080
 
-# print env
-print(f"Environment: {environment}")
+# Get base public URL from environment variable
+NGROK_URL = os.environ.get("NGROK_URL")
+if not NGROK_URL:
+    if environment == "local":
+         logger.warning("NGROK_URL environment variable not set. Image URLs will likely fail.")
+         # Set a placeholder for local testing, but this won't work for LINE
+         NGROK_URL = f"http://{webhook_host}:{webhook_port}"
+    else:
+        logger.error("NGROK_URL environment variable is REQUIRED in production/deployment.")
+        # In a real deployment, you might want to raise an error or exit
+        NGROK_URL = "" # Set to empty to cause downstream errors if not set
 
+logger.info(f"Using base URL for images: {NGROK_URL}")
+
+# Log environment
+logger.info(f"Environment: {environment}")
+
+# Configure Gemini
 genai.configure(api_key=gemini_api_key)
 
-# Create the model
+# Create models
 generation_config = {
     "temperature": 1,
     "top_p": 0.95,
@@ -51,6 +86,7 @@ vision_model = genai.GenerativeModel(
     generation_config=generation_config,
 )
 
+
 chat_session = text_model.start_chat(
     history=[
         {
@@ -62,7 +98,7 @@ chat_session = text_model.start_chat(
         {
             "role": "model",
             "parts": [
-                "Hello! How can I help you today?\n",
+                "Hello! How can I help you today?\\n",
             ],
         },
     ]
@@ -75,12 +111,12 @@ def get_text_response(user_input):
     return response.text
 
 # Function to process image and get summary
-def get_image_summary(image_url):
+def get_image_summary(message_id):
     try:
-        # Download the image from LINE's server
-        content = line_bot_api.get_message_content(image_url)
+        # Download the image from LINE's server using v1 API for simplicity
+        message_content = line_bot_api.get_message_content(message_id)
         image_data = BytesIO()
-        for chunk in content.iter_content():
+        for chunk in message_content.iter_content():
             image_data.write(chunk)
         image_data.seek(0)
         
@@ -100,22 +136,25 @@ def get_image_summary(image_url):
         
         return response.text
     except Exception as e:
-        print(f"Error processing image: {e}")
+        logger.error(f"Error processing image: {e}")
         return "抱歉，我無法處理這張圖片。請再試一次或上傳其他圖片。"
 
 
 # initialize the Flask app
 app = Flask(__name__)
 
-
+# Initialize APIs
 line_bot_api = LineBotApi(access_token)
 handler = WebhookHandler(secret)
 
+# Add a route to serve generated images
+@app.route('/images/<filename>')
+def serve_image(filename):
+    return send_from_directory('images', filename)
 
 @app.route("/health")
 def health():
     return ("OK", 200)
-
 
 @app.route("/", methods=["POST"])
 def callback():
@@ -127,41 +166,131 @@ def callback():
         abort(400)
     return "OK"
 
+# Function to process text message in a separate thread
+def process_text_message_async(user_id, user_input):
+    # Process the text message
+    response = get_text_response(user_input)
+    
+    # Send the actual response
+    line_bot_api.push_message(
+        user_id,
+        TextSendMessage(text=response)
+    )
+
+# Function to process image generation in a separate thread
+def process_image_generation_async(user_id, prompt):
+    # Generate image from the prompt using the imported function
+    mime_type, relative_file_path = generate_image_from_vision_module(prompt)
+    
+    if mime_type and relative_file_path:
+        # Construct the PUBLIC HTTPS URL for the image
+        if not NGROK_URL:
+            logger.error("NGROK_URL is not configured. Cannot send image.")
+            line_bot_api.push_message(
+                user_id,
+                TextSendMessage(text="伺服器設定錯誤，無法傳送圖片URL。")
+            )
+            return
+            
+        # Ensure NGROK_URL ends with a single slash if not empty
+        base_url = NGROK_URL.rstrip('/') if NGROK_URL else ''
+        image_public_url = f"{base_url}/{relative_file_path}"
+        logger.info(f"Generated image public URL: {image_public_url}")
+        
+        # Send the generated image using the public URL
+        try:
+            line_bot_api.push_message(
+                user_id,
+                ImageSendMessage(
+                    original_content_url=image_public_url,
+                    preview_image_url=image_public_url
+                )
+            )
+        except Exception as e:
+            logger.error(f"Error sending image with URL {image_public_url}: {e}")
+            # If sending the image fails, send a text message instead
+            line_bot_api.push_message(
+                user_id,
+                TextSendMessage(text="已生成圖片，但無法發送。請再試一次。")
+            )
+    else:
+        # Send error message if image generation failed
+        line_bot_api.push_message(
+            user_id,
+            TextSendMessage(text="抱歉，無法生成圖片。請再試一次或使用不同的描述。")
+        )
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     user_input = event.message.text
-    response = get_text_response(user_input)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response)
+    user_id = event.source.user_id
+    
+    # Check if the message is a request to generate an image
+    if user_input.startswith("/image ") or user_input.startswith("圖片 ") or user_input.startswith("生成圖片 "):
+        # Extract the prompt for image generation
+        if user_input.startswith("/image "):
+            prompt = user_input[7:]
+        elif user_input.startswith("圖片 "):
+            prompt = user_input[3:]
+        else:  # 生成圖片
+            prompt = user_input[5:]
+        
+        # Send immediate response
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請稍候，正在生成圖片...")
+        )
+        
+        # Process image generation in a separate thread
+        threading.Thread(target=process_image_generation_async, args=(user_id, prompt)).start()
+    else:
+        # Send immediate response
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請稍候，正在生成回應...")
+        )
+        
+        # Process text message in a separate thread
+        threading.Thread(target=process_text_message_async, args=(user_id, user_input)).start()
+
+# Function to process image analysis in a separate thread
+def process_image_analysis_async(user_id, message_id):
+    # Get image summary from Gemini
+    summary = get_image_summary(message_id)
+    
+    # Send the summary
+    line_bot_api.push_message(
+        user_id,
+        TextSendMessage(text=summary)
     )
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
     # Get the message ID of the image
     message_id = event.message.id
+    user_id = event.source.user_id
     
-    # Get image summary from Gemini
-    summary = get_image_summary(message_id)
-    
-    # Reply with the summary
+    # Send immediate response
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=summary)
+        TextSendMessage(text="請稍候，正在分析圖片...")
     )
+    
+    # Process image analysis in a separate thread
+    threading.Thread(target=process_image_analysis_async, args=(user_id, message_id)).start()
 
 # SYSTEM PROMPT should prepare to answer with Traditional Chinese
 SYSTEM_PROMPT = "請以繁體中文回應"
 
-
+# Function to handle follow event
 @handler.add(FollowEvent)
 def handle_follow(event):
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=SYSTEM_PROMPT))
-
+        TextSendMessage(text=SYSTEM_PROMPT)
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
+    logger.info(f"Starting LINE Bot application on port {port}")
     app.run(host="0.0.0.0", port=port)
