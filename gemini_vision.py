@@ -54,12 +54,13 @@ def generate_image_from_text(prompt: str):
 
         logger.info(f"Generating image from prompt: {prompt}")
         
-        # Prepare content for image generation
+        # Prepare content for image generation with meme style
+        meme_prompt = f"Create a funny meme image without any text: {prompt}. Make it humorous and visually engaging, but do not include any text or captions in the image itself."
         contents = [
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(text=prompt),
+                    types.Part.from_text(text=meme_prompt),
                 ]
             )
         ]
