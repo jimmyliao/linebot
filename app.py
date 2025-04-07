@@ -31,6 +31,9 @@ import base64
 import mimetypes
 from pathlib import Path
 from io import BytesIO
+import requests
+import json
+import random
 
 from gemini_vision import generate_image_from_text as generate_image_from_vision_module
 
@@ -42,6 +45,7 @@ access_token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 secret = os.environ["LINE_CHANNEL_SECRET"]
 environment = os.environ.get("ENVIRONMENT", "local")
 gemini_api_key = os.environ["GEMINI_API_KEY"]
+giphy_api_key = os.environ.get("GIPHY_API_KEY", "None")
 webhook_host = "0.0.0.0"
 webhook_port = 8080
 
@@ -224,12 +228,28 @@ def process_image_generation_async(user_id, prompt):
             TextSendMessage(text="抱歉，無法生成圖片。請再試一次或使用不同的描述。")
         )
 
+def get_random_meme():
+    try:
+        url = f"https://api.giphy.com/v1/gifs/random?api_key={giphy_api_key}&tag=meme&rating=g"
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            gif_url = data["data"]["images"]["original"]["url"]
+            return gif_url
+        else:
+            logger.error(f"GIPHY API error: {response.status_code}")
+            return None
+    except Exception as e:
+        logger.error(f"Error getting meme from GIPHY: {e}")
+        return None
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     user_input = event.message.text
     user_id = event.source.user_id
     
-    # Check if the message is a request to generate an image
+    # Check if the message is a request to generate an image or get a meme
     if user_input.startswith("/image ") or user_input.startswith("圖片 ") or user_input.startswith("生成圖片 "):
         # Extract the prompt for image generation
         if user_input.startswith("/image "):
@@ -247,6 +267,35 @@ def handle_text_message(event):
         
         # Process image generation in a separate thread
         threading.Thread(target=process_image_generation_async, args=(user_id, prompt)).start()
+    elif user_input.startswith("/meme"):
+        # Send immediate response
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請稍候，正在尋找有趣的迷因...")
+        )
+        
+        # Get random meme
+        gif_url = get_random_meme()
+        if gif_url:
+            try:
+                line_bot_api.push_message(
+                    user_id,
+                    ImageSendMessage(
+                        original_content_url=gif_url,
+                        preview_image_url=gif_url
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Error sending meme: {e}")
+                line_bot_api.push_message(
+                    user_id,
+                    TextSendMessage(text=f"抱歉，無法顯示迷因。您可以透過以下網址查看：\n{gif_url}")
+                )
+        else:
+            line_bot_api.push_message(
+                user_id,
+                TextSendMessage(text="抱歉，無法取得迷因。請稍後再試。")
+            )
     else:
         # Send immediate response
         line_bot_api.reply_message(
