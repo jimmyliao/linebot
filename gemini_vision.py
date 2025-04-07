@@ -59,7 +59,8 @@ def generate_image_from_text(prompt: str):
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(text=prompt)
+                    types.Part.from_text(text="cat"),
+                    types.Part.from_text(text=prompt),
                 ]
             )
         ]

@@ -45,7 +45,7 @@ access_token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
 secret = os.environ["LINE_CHANNEL_SECRET"]
 environment = os.environ.get("ENVIRONMENT", "local")
 gemini_api_key = os.environ["GEMINI_API_KEY"]
-giphy_api_key = os.environ.get("GIPHY_API_KEY", "None")
+giphy_api_key = os.environ["GIPHY_API_KEY"]
 webhook_host = "0.0.0.0"
 webhook_port = 8080
 
@@ -229,20 +229,31 @@ def process_image_generation_async(user_id, prompt):
         )
 
 def get_random_meme():
+    # If GIPHY API key is available and valid, use GIPHY
+    # get giphy_api_key is not None or your_giphy_api_key
+    # if giphy_api_key and giphy_api_key != "None":
+    if giphy_api_key and giphy_api_key != "None" and giphy_api_key != "" and giphy_api_key != "your_giphy_api_key":
+        try:
+            url = f"https://api.giphy.com/v1/gifs/random?api_key={giphy_api_key}&tag=meme&rating=g"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                gif_url = data["data"]["images"]["original"]["url"]
+                return gif_url, True  # True indicates it's a GIF
+            else:
+                logger.error(f"GIPHY API error: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error getting meme from GIPHY: {e}")
+    
+    # Fallback to Picsum
     try:
-        url = f"https://api.giphy.com/v1/gifs/random?api_key={giphy_api_key}&tag=meme&rating=g"
-        response = requests.get(url)
-        
-        if response.status_code == 200:
-            data = response.json()
-            gif_url = data["data"]["images"]["original"]["url"]
-            return gif_url
-        else:
-            logger.error(f"GIPHY API error: {response.status_code}")
-            return None
+        width = random.randint(300, 800)
+        height = random.randint(300, 800)
+        return f"https://picsum.photos/{width}/{height}", False  # False indicates it's not a GIF
     except Exception as e:
-        logger.error(f"Error getting meme from GIPHY: {e}")
-        return None
+        logger.error(f"Error getting image from Picsum: {e}")
+        return None, False
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
@@ -274,27 +285,34 @@ def handle_text_message(event):
             TextSendMessage(text="請稍候，正在尋找有趣的迷因...")
         )
         
-        # Get random meme
-        gif_url = get_random_meme()
-        if gif_url:
+        # Get random meme or image
+        image_url, is_gif = get_random_meme()
+        if image_url:
             try:
                 line_bot_api.push_message(
                     user_id,
                     ImageSendMessage(
-                        original_content_url=gif_url,
-                        preview_image_url=gif_url
+                        original_content_url=image_url,
+                        preview_image_url=image_url
                     )
                 )
+                
+                # If using Picsum (not a GIF), send a message indicating it's a random photo
+                if not is_gif:
+                    line_bot_api.push_message(
+                        user_id,
+                        TextSendMessage(text="由於未設定 GIPHY API，已改為隨機照片。")
+                    )
             except Exception as e:
-                logger.error(f"Error sending meme: {e}")
+                logger.error(f"Error sending image: {e}")
                 line_bot_api.push_message(
                     user_id,
-                    TextSendMessage(text=f"抱歉，無法顯示迷因。您可以透過以下網址查看：\n{gif_url}")
+                    TextSendMessage(text=f"抱歉，無法顯示圖片。您可以透過以下網址查看：\n{image_url}")
                 )
         else:
             line_bot_api.push_message(
                 user_id,
-                TextSendMessage(text="抱歉，無法取得迷因。請稍後再試。")
+                TextSendMessage(text="抱歉，無法取得圖片。請稍後再試。")
             )
     else:
         # Send immediate response
