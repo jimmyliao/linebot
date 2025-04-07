@@ -184,3 +184,6 @@ images/*.png
 # .env.tmp
 .env.tmp
 
+# .ngrok/config.yml
+.ngrok/config.yml
+
