@@ -151,10 +151,7 @@ app = Flask(__name__)
 line_bot_api = LineBotApi(access_token)
 handler = WebhookHandler(secret)
 
-# Add a route to serve generated images
-@app.route('/images/<filename>')
-def serve_image(filename):
-    return send_from_directory('images', filename)
+# Images are now served automatically from the static folder
 
 @app.route("/health")
 def health():
@@ -196,11 +193,29 @@ def process_image_generation_async(user_id, prompt):
             )
             return
             
-        # Ensure NGROK_URL ends with a single slash if not empty
+        # Construct URL for static file
         base_url = NGROK_URL.rstrip('/') if NGROK_URL else ''
         image_public_url = f"{base_url}/{relative_file_path}"
         logger.info(f"Generated image public URL: {image_public_url}")
         
+        # Check if the file exists and wait for it to be fully written
+        file_path = Path(relative_file_path)
+        max_retries = 5
+        retry_count = 0
+        while retry_count < max_retries:
+            if file_path.exists() and file_path.stat().st_size > 0:
+                break
+            time.sleep(1)  # Wait for 1 second before checking again
+            retry_count += 1
+            
+        if retry_count >= max_retries:
+            logger.error(f"Timeout waiting for file {relative_file_path} to be ready")
+            line_bot_api.push_message(
+                user_id,
+                TextSendMessage(text="抱歉，圖片生成過程發生錯誤。請稍後再試。")
+            )
+            return
+            
         # Send both the image and its URL
         try:
             # Send messages in a batch to maintain order

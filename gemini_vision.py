@@ -17,13 +17,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def save_binary_file(file_name, data):
-    """Saves binary data to a file in the 'images' directory."""
+    """Saves binary data to a file in the 'static' directory."""
     try:
-        # Create images directory if it doesn't exist
-        image_dir = Path("images")
-        image_dir.mkdir(exist_ok=True)
+        # Create static/images directory if it doesn't exist
+        image_dir = Path("static/images")
+        image_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save file in images directory
+        # Save file in static/images directory
         file_path = image_dir / file_name
         with open(file_path, "wb") as f:
             f.write(data)
@@ -59,7 +59,6 @@ def generate_image_from_text(prompt: str):
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(text="cat"),
                     types.Part.from_text(text=prompt),
                 ]
             )
@@ -92,7 +91,7 @@ def generate_image_from_text(prompt: str):
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 file_name = f"generated_image_{timestamp}"
                 file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".png"  # Default to png if unknown
-                relative_file_path = f"images/{file_name}{file_extension}"
+                relative_file_path = f"static/images/{file_name}{file_extension}"
                 
                 # Save the image
                 absolute_file_path = save_binary_file(f"{file_name}{file_extension}", inline_data.data)
