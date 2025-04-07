@@ -197,21 +197,25 @@ def process_image_generation_async(user_id, prompt):
         image_public_url = f"{base_url}/{relative_file_path}"
         logger.info(f"Generated image public URL: {image_public_url}")
         
-        # Send the generated image using the public URL
+        # Send both the image and its URL
         try:
+            # Send messages in a batch to maintain order
             line_bot_api.push_message(
                 user_id,
-                ImageSendMessage(
-                    original_content_url=image_public_url,
-                    preview_image_url=image_public_url
-                )
+                [
+                    ImageSendMessage(
+                        original_content_url=image_public_url,
+                        preview_image_url=image_public_url
+                    ),
+                    TextSendMessage(text=f"圖片網址：{image_public_url}")
+                ]
             )
         except Exception as e:
             logger.error(f"Error sending image with URL {image_public_url}: {e}")
-            # If sending the image fails, send a text message instead
+            # If sending fails, send just the URL
             line_bot_api.push_message(
                 user_id,
-                TextSendMessage(text="已生成圖片，但無法發送。請再試一次。")
+                TextSendMessage(text=f"已生成圖片，但無法直接顯示。您可以透過以下網址查看：\n{image_public_url}")
             )
     else:
         # Send error message if image generation failed
