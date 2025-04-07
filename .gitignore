@@ -175,6 +175,7 @@ cython_debug/
 
 # images/
 images/
+images/*.png
 
 # .DS_Store
 .DS_Store
